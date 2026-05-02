@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gamificación - Estados Zulia y Falcón</title>
+    <style>
+        :root {
+            --green-primary: #8cc63f;
+            --green-dark: #76a832;
+            --green-light: #d4e8b8;
+            --red-fail: #ec1c24;
+            --bg-gray: #f0f1f2;
+            --text-main: #333;
+        }
+
+        body {
+            background-color: var(--bg-gray);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Cabecera de Pregunta */
+        .question-container {
+            width: 90%;
+            max-width: 800px;
+            background: white;
+            margin-top: 20px;
+            padding: 25px;
+            border-radius: 15px;
+            border-bottom: 5px solid var(--green-light);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            text-align: center;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #question-text {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin: 0;
+        }
+
+        /* Área del Juego */
+        .game-area {
+            position: relative;
+            width: 600px;
+            height: 550px;
+            margin-top: 20px;
+        }
+
+        /* El Rosco */
+        .rosco-letter {
+            position: absolute;
+            width: 42px;
+            height: 42px;
+            background: white;
+            border: 2px solid #ccc;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+            transform: translate(-50%, -50%);
+            transition: all 0.3s ease;
+            z-index: 2;
+        }
+
+        .rosco-letter.active {
+            background-color: var(--green-primary);
+            color: white;
+            border-color: var(--green-primary);
+            transform: translate(-50%, -50%) scale(1.2);
+            box-shadow: 0 0 15px rgba(140, 198, 63, 0.4);
+        }
+
+        .rosco-letter.correct { background-color: var(--green-primary); color: white; border-color: var(--green-primary); }
+        .rosco-letter.wrong { background-color: var(--red-fail); color: white; border-color: var(--red-fail); }
+
+        /* Controles Centrales */
+        .game-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            width: 300px;
+        }
+
+        .hint-label {
+            font-size: 1.2rem;
+            color: #666;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .hint-label strong { color: var(--text-main); font-size: 1.5rem; }
+
+        #answer-input {
+            width: 80%;
+            padding: 12px;
+            font-size: 1.4rem;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            text-align: center;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        #answer-input:focus { border-color: var(--green-primary); }
+
+        .btn-next {
+            background-color: var(--green-primary);
+            border: none;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            margin-top: 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 var(--green-dark);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-next:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--green-dark); }
+        .btn-next svg { fill: white; width: 30px; height: 30px; }
+
+        /* Footer y Stats */
+        .footer-stats {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            display: flex;
+            gap: 15px;
+        }
+
+        .stat-box {
+            background: white;
+            padding: 10px 25px;
+            border-radius: 50px;
+            border: 3px solid var(--green-primary);
+            font-size: 1.8rem;
+            font-weight: bold;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .progress-tag {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: white;
+            border: 2px dotted var(--green-primary);
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        /* Pantalla Final */
+        .screen-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.98);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .btn-restart {
+            padding: 15px 40px;
+            background: var(--green-primary);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="question-container">
+        <p id="question-text">Cargando pregunta...</p>
+    </div>
+
+    <div class="game-area">
+        <div class="progress-tag"><span id="current-num">1</span>/26</div>
+        <div id="rosco-container"></div>
+        
+        <div class="game-center">
+            <span class="hint-label" id="hint-label">Empieza por <strong>A</strong></span>
+            <input type="text" id="answer-input" placeholder="Respuesta..." autocomplete="off">
+            <br>
+            <button class="btn-next" id="btn-submit">
+                <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <div class="footer-stats">
+        <div class="stat-box" id="timer">00:30</div>
+    </div>
+
+    <!-- Final del Juego -->
+    <div id="end-screen" class="screen-overlay">
+        <h1 id="end-title" style="font-size: 3rem; margin-bottom: 0;">¡JUEGO TERMINADO!</h1>
+        <p id="end-stats" style="font-size: 1.5rem; color: #666;"></p>
+        <button class="btn-restart" onclick="location.reload()">EMPEZAR DE CERO</button>
+    </div>
+
+    <script>
+        // --- CONFIGURACIÓN DE PREGUNTAS
+        const questions = [
+            { letra: "A", p: "Con la A: Pueblo de Falcon conocido por sus artesanias de barro", r: "Anaure" },
+            { letra: "B", p: "Con la B: Iglesia en Maracaibo de la Virgen Chinita", r: "Basilica" },
+            { letra: "C", p: "Con la C: ¿Cómo se llama la capital de Falcón?", r: "Coro" },
+            { letra: "D", p: "Con la D: Montañas de arena en Coro", r: "Dunas" },
+            { letra: "E", p: "Con la E: ¿Por donde pasa el puente de Maracaibo?", r: "El Lago" },
+            { letra: "F", p: "Con la F: ¿Cual es el intrumento musical de origen zuliano?", r: "Furruco" },
+            { letra: "G", p: "Con la G: Musica que se canta en navidad en Zulia", r: "Gaita" },
+            { letra: "H", p: "Con la H: Nombre de los compuestos como el gas y el petroleo, bases de la industria de la región", r: "Hidrocarburos" },
+            { letra: "I", p: "Con la I: ¿Que hay más en Paraguaná?", r: " Industrias" },
+            { letra: "J", p: "Con la J: ¿Que le ponen a la comida en el Zulia para que sepa rico: Jabón o Jugo de Limón?", r: "Jugo de Limon" },
+            { letra: "K", p: "Con la K: Tipo de acertijo matematico similar al sudoku que suele aparecer en la sección de pasatiempos en los diarios de Zulia como Diario La Verdad", r: "Kakuro" },   
+            { letra: "L", p: "Con la L: Cuerpo de agua en el Zulia donde se instaló el primer sistema de iluminación electrica del país?", r: "Lago" },
+            { letra: "M", p: "Con la M: ¿Cómo se llama la capital de Zulia?", r: "Maracaibo" },
+            { letra: "N", p: "Con la N: Parque Nacional de Falcón que tiene muchas playas y cayos", r: "Nacional Morrocoy" },
+            { letra: "O", p: "Con la O: Apellido de quien descubrio el Lago", r: "Ojeda" },
+            { letra: "P", p: "Con la P: ¿Cómo se llama el puente sobre el lago de Maracaibo?", r: "Puente General Rafael Urdaneta" },
+            { letra: "Q", p: "Con la Q: ¿Qué es lo que sacan de los pozos en Zulia?", r: "Petroleo" },
+            { letra: "R", p: "Con la R: Rayos que nunca dejan de caer en el Zulia", r: "Relampago del Catatumbo" },
+            { letra: "S", p: "Con la S: ¿Que se hace en las playas de Falcón?", r: "Surf" },
+            { letra: "T", p: "Con la T: Lo que se toca en la gaita", r: "Tambora" },
+            { letra: "U", p: "Con la U: Apellido del procer Rafael... cuyo nombre lleva el Puente que conecta a Maracaibo con el resto del pais", r: "Urdaneta" },
+            { letra: "V", p: "Con la V: Nombre del pais donde el desarrollo tecnologico moderno comenzo con el petroleo en el occidente", r: "Venezuela" },
+            { letra: "W", p: "Con la W: ¿Los indios del Zulia son los...?", r: "Wayuu" },
+            { letra: "X", p: "Con la X: ¿Cómo es el clima de los Medanos?", r: "Xerofilo" },
+            { letra: "Y", p: "Con la Y: Estado vecino de Falcón", r: "Yaracuy" },
+            { letra: "Z", p: "Con la Z: Estado donde esta El Puente y el Lago", r: "Zulia" }
+        ];
+
+        let currentIdx = 0;
+        let score = 0;
+        let timeLeft = 15;
+        let timerInterval;
+
+        // Iniciar el Rosco
+        const container = document.getElementById('rosco-container');
+        const radius = 230;
+        questions.forEach((q, i) => {
+            const div = document.createElement('div');
+            div.className = 'rosco-letter';
+            div.id = `node-${i}`;
+            div.innerText = q.letra;
+            const angle = (i * (360 / questions.length) - 90) * (Math.PI / 180);
+            div.style.left = (300 + radius * Math.cos(angle)) + 'px';
+            div.style.top = (275 + radius * Math.sin(angle)) + 'px';
+            container.appendChild(div);
+        });
+
+        function updateGame() {
+            if (currentIdx >= questions.length) {
+                endGame();
+                return;
+            }
+
+            // Actualizar textos
+            const q = questions[currentIdx];
+            document.getElementById('question-text').innerText = q.p;
+            document.getElementById('hint-label').innerHTML = `Empieza por <strong>${q.letra}</strong>`;
+            document.getElementById('current-num').innerText = currentIdx + 1;
+
+            // Actualizar clases del rosco
+            document.querySelectorAll('.rosco-letter').forEach(n => n.classList.remove('active'));
+            document.getElementById(`node-${currentIdx}`).classList.add('active');
+
+            // Reset input y tiempo
+            document.getElementById('answer-input').value = "";
+            document.getElementById('answer-input').focus();
+            resetTimer();
+        }
+
+        function resetTimer() {
+            clearInterval(timerInterval);
+            timeLeft = 35;
+            updateTimerUI();
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerUI();
+                if (timeLeft <= 0) checkAnswer();
+            }, 1000);
+        }
+
+        function updateTimerUI() {
+            const s = timeLeft < 10 ? '0' + timeLeft : timeLeft;
+            document.getElementById('timer').innerText = `00:${s}`;
+        }
+
+        function checkAnswer() {
+            const input = document.getElementById('answer-input').value.toLowerCase().trim();
+            const correctStr = questions[currentIdx].r.toLowerCase();
+            const node = document.getElementById(`node-${currentIdx}`);
+
+            if (input === correctStr) {
+                node.classList.add('correct');
+                score++;
+            } else {
+                node.classList.add('wrong');
+                // IMPORTANTE: Aquí no se quitan vidas, simplemente se marca como fallida
+            }
+
+            currentIdx++;
+            updateGame();
+        }
+
+        function endGame() {
+            clearInterval(timerInterval);
+            document.getElementById('end-screen').style.display = 'flex';
+            document.getElementById('end-stats').innerText = `Aciertos: ${score} de ${questions.length}`;
+            if(score === questions.length) {
+                document.getElementById('end-title').innerText = "¡PERFECTO!";
+                document.getElementById('end-title').style.color = "var(--green-primary)";
+            }
+        }
+
+        // Eventos
+        document.getElementById('btn-submit').onclick = checkAnswer;
+        document.getElementById('answer-input').onkeypress = (e) => { if(e.key === 'Enter') checkAnswer(); };
+
+        // Inicio real
+        updateGame();
+    </script>
+</body>
+</html>
